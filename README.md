@@ -1,14 +1,9 @@
 # mnt - Mount Manager & Remote Command Tool
 
-A simple tool to store the commands you use to mount and unmount filesystems. Intended for use with e.g. sshfs.
+A simple tool to store and execute the commands you use to mount and unmount filesystems. Intended for use with e.g. sshfs.
 
 Note: There is *no* security built into this tool. Use only in completely trusted environments.
 
-## Features
-- **Mount Management**: Store and run mount/unmount commands for servers
-- **SSH Execution**: Run commands on remote servers with directory context
-- **Shell Integration**: `cd` directly to mount paths with shell helper
-- **Config Persistence**: Stores configurations in `~/.config/mnt/config.json`
 
 ## Installation
 ```bash
