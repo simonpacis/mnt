@@ -1,6 +1,8 @@
 # mnt - Mount Manager & Remote Command Tool
 
-A lightweight CLI tool to manage mount commands and execute remote operations.
+A simple tool to store the commands you use to mount and unmount filesystems. Intended for use with e.g. sshfs.
+
+Note: There is *no* security built into this tool. Use only in completely trusted environments.
 
 ## Features
 - **Mount Management**: Store and run mount/unmount commands for servers
@@ -10,7 +12,7 @@ A lightweight CLI tool to manage mount commands and execute remote operations.
 
 ## Installation
 ```bash
-git clone https://github.com/yourusername/mnt.git
+git clone https://github.com/simonpacis/mnt.git
 cd mnt
 sudo ln -s $(pwd)/mnt.py /usr/local/bin/mnt
 ```
