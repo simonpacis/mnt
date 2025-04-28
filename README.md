@@ -4,7 +4,6 @@ A simple tool to store and execute the commands you use to mount and unmount fil
 
 Note: There is *no* security built into this tool. Use only in completely trusted environments.
 
-
 ## Installation
 ```bash
 git clone https://github.com/simonpacis/mnt.git
