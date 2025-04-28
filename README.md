@@ -11,23 +11,40 @@ cd mnt
 sudo ln -s $(pwd)/mnt.py /usr/local/bin/mnt
 ```
 
-## Basic Usage
+## Help 
 ```bash
-# Add a server
-mnt add myserver "sshfs user@host:/path /local/mount" "fusermount -u /local/mount"
+mnt - Mount and remote command management tool
 
-# Mount/unmount
-mnt myserver          # Mounts 'myserver'
-mnt unmount myserver  # Unmounts
+Usage:
+    mnt <command> [arguments]
+    mnt <server_name>          # Shortcut for 'mnt mount <server_name>'
 
-# SSH command execution
-mnt enable-ssh-exec myserver example.com user
-mnt ssh-exec myserver ls -la
+Core Commands:
+    mount <server>             Mount a configured server
+    unmount <server>           Unmount a configured server
+    cd <server>               Change to server's mount directory (requires shell integration)
+    ssh-exec [server] <cmd>    Execute remote command (uses last mounted server if omitted)
 
-# Shell integration
-mnt cd myserver       # Changes to mount directory (requires setup)
-mnt enable-cd        # Shows setup instructions
+Server Management:
+    add <name> <mount_cmd> <unmount_cmd> [mount_path]   Add new server configuration
+    update <name> <mount|unmount> <command>             Update server commands
+    delete <name>                                       Delete server configuration
+    list                                                List all configured servers
+    enable-ssh-exec <args>                              Configure server for SSH commands
+    enable-cd                                          Show instructions for cd integration
+
+SSH Configuration:
+    enable-ssh-exec <server> <host> <user> [key_path] [remote_dir]
+        Configure SSH access for a server
+        Example: mnt enable-ssh-exec myserver example.com user ~/.ssh/id_rsa /projects
+        * Only host and user are required
+
+Examples:
+    mnt add web sshfs "user@host:/path ~/mnt/web" "umount ~/mnt/web"
+    mnt web                      # Mounts 'web' server
+    mnt cd web                   # Changes to web's mount directory
+    mnt ssh-exec web ls -la      # Run command on 'web'
+    mnt ssh-exec make            # Run on last mounted server
+    mnt enable-cd               # Show cd integration instructions
 ```
 
-## Full Documentation
-Run `mnt help` for complete command reference.
