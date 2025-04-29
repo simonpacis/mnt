@@ -8,7 +8,8 @@ Note: There is *no* security built into this tool. Use only in completely truste
 ```bash
 git clone https://github.com/simonpacis/mnt.git
 cd mnt
-sudo ln -s $(pwd)/mnt.py /usr/local/bin/mnt
+mv mnt.py /usr/local/bin/mnt
+sudo chmod +x /usr/local/bin/mnt
 ```
 
 ## Help 
