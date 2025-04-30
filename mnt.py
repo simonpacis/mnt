@@ -5,6 +5,8 @@ import os
 import json
 import sys
 import time
+import shlex
+import subprocess
 
 
 config_folder = os.path.expanduser('~/.config/mnt')
@@ -238,7 +240,7 @@ def ssh_exec():
         # No valid server specified - use last mounted with full command
         server_name = last_mounted_server()
         command = " ".join(sys.argv[2:])  # If no server, command starts from argv[2]
-        
+
         if server_name is None:
             print('Error: No server specified and no last-mounted server available')
             print('Usage: mnt ssh-exec [<server_name>] <command>')
@@ -251,7 +253,7 @@ def ssh_exec():
         sys.exit(1)
 
     # Build SSH command components
-    ssh_parts = ['ssh']
+    ssh_parts = ['ssh', '-tt']  # Force pseudo-terminal allocation
 
     # Add identity file if specified
     if 'key_path' in server:
@@ -266,24 +268,21 @@ def ssh_exec():
     # Add host
     ssh_parts.append(server['host'])
 
-    # Add remote directory if specified
-    remote_cmd = command
+    # Handle remote command construction
     if 'remote_dir' in server:
-        # Escape single quotes in path
-        escaped_dir = server['remote_dir'].replace("'", "'\\''")
-        # Wrap in login shell to load aliases/functions
-        remote_cmd = f"bash -lic 'cd '\''{escaped_dir}'\'' && {command}'"
+        # Use sh -c for better quoting behavior
+        remote_cmd = f"cd {shlex.quote(server['remote_dir'])} && {command}"
     else:
-        # Still use login shell even without cd
-        remote_cmd = f"bash -lic '{command}'"
+        remote_cmd = command
 
-# Final command assembly
-    full_cmd = ' '.join(ssh_parts) + f' "{remote_cmd}"'
+    # Execute with proper shell handling
+    full_cmd = ssh_parts + [remote_cmd]
 
-    # Execute
-    print(f"Executing: {full_cmd}")
-    os.system(full_cmd)
-    sys.exit(0)
+    # Debug output
+    print(f"Executing: {' '.join(shlex.quote(arg) for arg in full_cmd)}")
+
+    # Execute directly without shell wrapping
+    sys.exit(subprocess.call(full_cmd))
 
 def cd_mount_path():
     try:
