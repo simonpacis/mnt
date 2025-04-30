@@ -186,9 +186,9 @@ def enable_ssh_exec():
         key_path = os.path.expanduser(sys.argv[5]) if len(sys.argv) > 5 else None
         remote_dir = sys.argv[6] if len(sys.argv) > 6 else None
     except IndexError:
-        print('Usage: mnt enable_ssh_exec <server_name> <host> <username> [<key_path>] [<remote_dir>]')
-        print('Example (minimal): mnt enable_ssh_exec my_server example.com user')
-        print('Example (full): mnt enable_ssh_exec my_server example.com user ~/.ssh/id_rsa /projects')
+        print('Usage: mnt enable-ssh-exec <server_name> <host> <username> [<key_path>] [<remote_dir>]')
+        print('Example (minimal): mnt enable-ssh-exec my_server example.com user')
+        print('Example (full): mnt enable-ssh-exec my_server example.com user ~/.ssh/id_rsa /projects')
         sys.exit(1)
 
     if server_name not in config['servers']:
@@ -233,16 +233,16 @@ def ssh_exec():
         # Try to get server name from args
         server_name = sys.argv[2]
         server = config['servers'][server_name]
-    except KeyError:
-        # No server specified - use last mounted
-        command = " ".join(sys.argv[2:])
+        command = " ".join(sys.argv[3:])  # If server found, command starts from argv[3]
+    except (KeyError, IndexError):
+        # No valid server specified - use last mounted with full command
         server_name = last_mounted_server()
+        command = " ".join(sys.argv[2:])  # If no server, command starts from argv[2]
+        
         if server_name is None:
             print('Error: No server specified and no last-mounted server available')
             print('Usage: mnt ssh-exec [<server_name>] <command>')
             sys.exit(1)
-        else:
-            command = " ".join(sys.argv[3:])
 
     try:
         server = config['servers'][server_name]
