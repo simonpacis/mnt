@@ -81,11 +81,12 @@ def unmount_server():
     sys.exit(0)
 
 def update_server():
+    prop_list = ["mount","unmount","mount_path"]
     try:
         server = sys.argv[2]
         prop = sys.argv[3]
-        if(prop != 'mount' and prop != 'unmount'):
-            print('Invalid property. Must be "mount" or "unmount"')
+        if prop not in prop_list:
+            print(f"Invalid property. Must be one of: {', '.join(prop_list)}")
             sys.exit(0)
         server_command = " ".join(sys.argv[4:])  # Joins with spaces, no extra quotes
     except IndexError:
@@ -100,8 +101,10 @@ def update_server():
         config['servers'][server]['command'] = server_command
     elif prop == 'unmount':
         config['servers'][server]['unmount_command'] = server_command
+    elif prop == "mount_path":
+        config['servers'][server]['mount_path'] = server_command
 
-    print(f"Updated server \"{server}\" with command \"{server_command}\"")
+    print(f"Updated server \"{server}\" prop \"{prop}\" to \"{server_command}\"")
 
     save_config()
     sys.exit(0)
