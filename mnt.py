@@ -45,7 +45,13 @@ def add_server():
 
     try:
         mount_path = sys.argv[5]
+        print('Creating mount path...')
+        if not os.path.exists(mount_path):
+            os.makedirs(mount_path, exist_ok=True)
+        add_mount_path = True
+
     except IndexError:
+        add_mount_path = False
         mount_path = None
 
     if server in config['servers']:
@@ -56,6 +62,7 @@ def add_server():
             'name': server,
             'command': server_command,
             'unmount_command': unmount_command,
+            'add_mount_path': add_mount_path,
             'mounted_time': None,
             'mount_path': mount_path
             }
@@ -77,7 +84,17 @@ def unmount_server():
 
     server = config['servers'][server_name]
 
-    os.system(server['unmount_command'])
+    add_mount_path = False
+    try:
+        add_mount_path = server['add_mount_path']
+    except KeyError:
+        pass
+    if(add_mount_path and server['add_mount_path']):
+        cmd = server['unmount_command'] + " " + server['mount_path']
+    else:
+        cmd = server['unmount_command']
+    print(cmd)
+    os.system(cmd)
     sys.exit(0)
 
 def update_server():
@@ -144,15 +161,15 @@ def list_servers():
         else:
             print(f"Mounted: {server['mounted_time']}")
         if server['mount_path'] is not None:
-            print(f"Mount path: {server['mount_path']}")
+            print(f"Mount path: \"{server['mount_path']}\"")
         try:
             if server['host'] is not None:
                 print('- SSH Exec') 
-                print(f"SSH Host: {server['host']}")
+                print(f"  Host: {server['host']}")
                 if server['key_path'] is not None:
-                    print(f"SSH Key: {server['key_path']}")
+                    print(f"  Key path: {server['key_path']}")
                 if server['remote_dir'] is not None:
-                    print(f"Remote directory: {server['remote_dir']}")
+                    print(f"  Remote directory: \"{server['remote_dir']}\"")
         except KeyError:
             pass
         print('')
@@ -163,7 +180,17 @@ def mount(server):
     config_server['mounted_time'] = int(time.time())
     save_config()
 
-    os.system(server['command'])
+    add_mount_path = False
+    try:
+        add_mount_path = server['add_mount_path']
+    except KeyError:
+        pass
+    if(add_mount_path and server['add_mount_path']):
+        cmd = server['command'] + " " + config_server['mount_path']
+    else:
+        cmd = server['command']
+    print(cmd)
+    os.system(cmd)
     sys.exit(0)
 
 def help():
@@ -180,7 +207,9 @@ Core Commands:
     ssh-exec [server] <cmd>    Execute remote command (uses last mounted server if omitted)
 
 Server Management:
-    add <name> <mount_cmd> <unmount_cmd> [mount_path]   Add new server configuration
+    add <name> <mount_cmd> <unmount_cmd> [mount_path]   Add new server configuration.
+                                                            Note: If mount_path is specified, it will be appended
+                                                            to the end of your mount and unmount commands.
     update <name> <mount|unmount> <command>             Update server commands
     delete <name>                                       Delete server configuration
     refresh <name>                                      Updates the mounted at time for the server
@@ -302,18 +331,28 @@ def ssh_exec():
     # Execute with proper shell handling
     full_cmd = ssh_parts + [remote_cmd]
 
-    # Debug output
-    print(f"Executing: {' '.join(shlex.quote(arg) for arg in full_cmd)}")
+    p = subprocess.Popen(full_cmd, stderr=subprocess.PIPE)
+    _, stderr = p.communicate()
 
-    # Execute directly without shell wrapping
-    sys.exit(subprocess.call(full_cmd))
+    # Filter out any line that starts with "Connection to" and ends with "closed."
+    filtered_stderr = b'\n'.join(
+        line for line in stderr.splitlines()
+        if not (
+            line.startswith(b'Connection to ')
+            and line.endswith(b' closed.')
+        )
+    )
+
+    if filtered_stderr:
+        sys.stderr.buffer.write(filtered_stderr)
+        sys.stderr.buffer.write(b'\n')
+    sys.exit(p.returncode)
 
 def cd_mount_path():
     try:
         # Try to get server name from args
-        server_name = sys.argv[1]
-        server = config['servers'][server_name]
-    except KeyError:
+        server_name = sys.argv[2]
+    except (KeyError, IndexError):
         # No server specified - use last mounted
         server_name = last_mounted_server()
         if server_name is None:
