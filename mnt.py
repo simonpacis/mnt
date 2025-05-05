@@ -89,7 +89,7 @@ def unmount_server():
         add_mount_path = server['add_mount_path']
     except KeyError:
         pass
-    if(add_mount_path and server['add_mount_path']):
+    if(add_mount_path and server['mount_path']):
         cmd = server['unmount_command'] + " " + server['mount_path']
     else:
         cmd = server['unmount_command']
@@ -185,8 +185,8 @@ def mount(server):
         add_mount_path = server['add_mount_path']
     except KeyError:
         pass
-    if(add_mount_path and server['add_mount_path']):
-        cmd = server['command'] + " " + config_server['mount_path']
+    if(add_mount_path and server['mount_path']):
+        cmd = server['command'] + " " + server['mount_path']
     else:
         cmd = server['command']
     print(cmd)
