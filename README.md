@@ -1,6 +1,6 @@
 # mnt - Mount Manager & Remote Command Tool
 
-A simple tool to store and execute the commands you use to mount and unmount filesystems. Intended for use with e.g. sshfs.
+A simple, dependency free Python tool to store and execute the commands you use to mount and unmount filesystems. Intended for use with e.g. sshfs. Allows you to execute commands on the server as well, see section SSH Exec.
 
 Note: There is *no* security built into this tool. Use only in completely trusted environments.
 
@@ -50,3 +50,5 @@ Examples:
     mnt enable-cd               # Show cd integration instructions
 ```
 
+## SSH Exec
+I typically use Vim, and in vim you can type "!command" to execute a shell command. Lacking this functionality when I use sshfs, I decided to implement what I call "SSH Exec" into mnt. Using it and a simple Vim-function, I am able to type "!! command", and execute the command on the remote server.
