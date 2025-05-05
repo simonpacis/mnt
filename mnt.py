@@ -297,6 +297,13 @@ def last_mounted_server():
 
     return last_server
 
+def get_server_from_mount_path(cwd):
+    for server in config['servers']:
+        server = config['servers'][server]
+        if server['mount_path'] == cwd:
+            return server['name']
+    return None
+
 def ssh_exec():
     try:
         # Try to get server name from args
@@ -304,13 +311,17 @@ def ssh_exec():
         server = config['servers'][server_name]
         command = " ".join(sys.argv[3:])  # If server found, command starts from argv[3]
     except (KeyError, IndexError):
-        # No valid server specified - use last mounted with full command
-        server_name = last_mounted_server()
-        command = " ".join(sys.argv[2:])  # If no server, command starts from argv[2]
+        cwd = sys.argv[2]
+        if not os.path.exists(cwd): # CWD does not exist, use last mounted
+            server_name = last_mounted_server()
+            command = " ".join(sys.argv[2:])
+        else:
+            server_name = get_server_from_mount_path(cwd)
+            command = " ".join(sys.argv[3:])
 
         if server_name is None:
-            print('Error: No server specified and no last-mounted server available')
-            print('Usage: mnt ssh-exec [<server_name>] <command>')
+            print('Error: No server specified, no mount path at provided cwd, and no last-mounted server available')
+            print('Usage: mnt ssh-exec [<server_name>] [<mount_path>] <command>')
             sys.exit(1)
 
     try:
@@ -345,6 +356,7 @@ def ssh_exec():
     # Execute with proper shell handling
     full_cmd = ssh_parts + [remote_cmd]
 
+    print(command)
     p = subprocess.Popen(full_cmd, stderr=subprocess.PIPE)
     _, stderr = p.communicate()
 
