@@ -445,6 +445,7 @@ if __name__ == '__main__':
     else:
         if command in config['servers']:
             mount(config['servers'][command])
+            sys.exit(0)
         print('Unknown command: ' + command)
         sys.exit(0)
 
