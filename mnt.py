@@ -45,13 +45,10 @@ def add_server():
 
     try:
         mount_path = sys.argv[5]
-        print('Creating mount path...')
-        if not os.path.exists(mount_path):
-            os.makedirs(mount_path, exist_ok=True)
-        add_mount_path = True
+        append_mount_path = True
 
     except IndexError:
-        add_mount_path = False
+        append_mount_path = False
         mount_path = None
 
     if server in config['servers']:
@@ -62,7 +59,7 @@ def add_server():
             'name': server,
             'command': server_command,
             'unmount_command': unmount_command,
-            'add_mount_path': add_mount_path,
+            'append_mount_path': append_mount_path,
             'mounted_time': None,
             'mount_path': mount_path
             }
@@ -83,13 +80,15 @@ def unmount_server():
         sys.exit(0)
 
     server = config['servers'][server_name]
+    server['mounted_time'] = None
+    save_config()
 
-    add_mount_path = False
+    append_mount_path = False
     try:
-        add_mount_path = server['add_mount_path']
+        append_mount_path = server['append_mount_path']
     except KeyError:
         pass
-    if(add_mount_path and server['mount_path']):
+    if(append_mount_path and server['mount_path']):
         cmd = server['unmount_command'] + " " + server['mount_path']
     else:
         cmd = server['unmount_command']
@@ -98,7 +97,7 @@ def unmount_server():
     sys.exit(0)
 
 def update_server():
-    prop_list = ["mount","unmount","mount_path"]
+    prop_list = ["mount","unmount","mount_path","append_mount_path","host","key_path","remote_dir"]
     try:
         server = sys.argv[2]
         prop = sys.argv[3]
@@ -120,6 +119,17 @@ def update_server():
         config['servers'][server]['unmount_command'] = server_command
     elif prop == "mount_path":
         config['servers'][server]['mount_path'] = server_command
+    elif prop == "append_mount_path":
+        if server_command == "true" or server_command == "True":
+            config['servers'][server]['append_mount_path'] = True
+        else:
+            config['servers'][server]['append_mount_path'] = False
+    elif prop == "host":
+        config['servers'][server]['host'] = server_command
+    elif prop == "key_path":
+        config['servers'][server]['key_path'] = server_command
+    elif prop == "remote_dir":
+        config['servers'][server]['remote_dir'] = server_command
 
     print(f"Updated server \"{server}\" prop \"{prop}\" to \"{server_command}\"")
 
@@ -157,11 +167,12 @@ def list_servers():
         print(f"Mount command: \"{server['command']}\"")
         print(f"Unmount command: \"{server['unmount_command']}\"")
         if server['name'] == last_mounted:
-            print(f"Mounted: {server['mounted_time']} (latest)")
+            print(f"Mounted at: {server['mounted_time']} (latest)")
         else:
-            print(f"Mounted: {server['mounted_time']}")
+            print(f"Mounted at: {server['mounted_time']}")
         if server['mount_path'] is not None:
-            print(f"Mount path: \"{server['mount_path']}\"")
+            print(f"Mount path: {server['mount_path']}")
+            print(f"Append mount path? {server['append_mount_path']}")
         try:
             if server['host'] is not None:
                 print('- SSH Exec') 
@@ -169,7 +180,7 @@ def list_servers():
                 if server['key_path'] is not None:
                     print(f"  Key path: {server['key_path']}")
                 if server['remote_dir'] is not None:
-                    print(f"  Remote directory: \"{server['remote_dir']}\"")
+                    print(f"  Remote directory: {server['remote_dir']}")
         except KeyError:
             pass
         print('')
@@ -180,12 +191,14 @@ def mount(server):
     config_server['mounted_time'] = int(time.time())
     save_config()
 
-    add_mount_path = False
+    append_mount_path = False
     try:
-        add_mount_path = server['add_mount_path']
+        append_mount_path = server['append_mount_path']
     except KeyError:
         pass
-    if(add_mount_path and server['mount_path']):
+    if(append_mount_path and server['mount_path']):
+        if not os.path.exists(server['mount_path']):
+            os.makedirs(server['mount_path'], exist_ok=True)
         cmd = server['command'] + " " + server['mount_path']
     else:
         cmd = server['command']
