@@ -28,7 +28,7 @@ Core Commands:
 
 Server Management:
     add <name> <mount_cmd> <unmount_cmd> [mount_path]   Add new server configuration
-    update <name> <mount|unmount> <command>             Update server commands
+    update <name> <prop> <command>                      Update server commands. Type "mnt update <name> help" to see all properties you can update.
     delete <name>                                       Delete server configuration
     list                                                List all configured servers
     enable-ssh-exec <args>                              Configure server for SSH commands
