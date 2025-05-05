@@ -51,4 +51,4 @@ Examples:
 ```
 
 ## SSH Exec
-I typically use Vim, and in vim you can type "!command" to execute a shell command. Lacking this functionality when I use sshfs, I decided to implement what I call "SSH Exec" into mnt. Using it and a simple Vim-function, I am able to type "!! command", and execute the command on the remote server. This is not enabled by default for an added server, but must be manually enabled through the command enable-ssh-exec. [See this Gist for my Vim-implementation](https://gist.github.com/simonpacis/ac0bf1aa8587a152fa0de27dbdaa4b93).
+I typically use Vim, and in vim you can type ```!command``` to execute a shell command. Lacking this functionality when I use sshfs, I decided to implement what I call "SSH Exec" into mnt. Using it and a simple Vim-function, I am able to type ```!! command```, and execute the command on the remote server. This is not enabled by default for an added server, but must be manually enabled through the command enable-ssh-exec. [See this Gist for my Vim-implementation](https://gist.github.com/simonpacis/ac0bf1aa8587a152fa0de27dbdaa4b93).
