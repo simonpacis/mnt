@@ -129,12 +129,32 @@ def delete_server():
     sys.exit(0)
 
 def list_servers():
-    print('Servers:')
+    print('\nmnt servers:\n')
+    last_mounted = last_mounted_server()
     for server in config['servers']:
         server = config['servers'][server]
-        print(f"Name: {server['name']}")
-        print(f"Command: {server['command']}")
-        print(f"Mounted: {server['mounted_time'] is not None}")
+        if server['name'] == last_mounted:
+            print(f"--- {server['name']} (latest) ---")
+        else:
+            print(f"--- {server['name']} ---")
+        print(f"Mount command: \"{server['command']}\"")
+        print(f"Unmount command: \"{server['unmount_command']}\"")
+        if server['name'] == last_mounted:
+            print(f"Mounted: {server['mounted_time']} (latest)")
+        else:
+            print(f"Mounted: {server['mounted_time']}")
+        if server['mount_path'] is not None:
+            print(f"Mount path: {server['mount_path']}")
+        try:
+            if server['host'] is not None:
+                print('- SSH Exec') 
+                print(f"SSH Host: {server['host']}")
+                if server['key_path'] is not None:
+                    print(f"SSH Key: {server['key_path']}")
+                if server['remote_dir'] is not None:
+                    print(f"Remote directory: {server['remote_dir']}")
+        except KeyError:
+            pass
         print('')
     sys.exit(0)
 
@@ -163,6 +183,7 @@ Server Management:
     add <name> <mount_cmd> <unmount_cmd> [mount_path]   Add new server configuration
     update <name> <mount|unmount> <command>             Update server commands
     delete <name>                                       Delete server configuration
+    refresh <name>                                      Updates the mounted at time for the server
     list                                                List all configured servers
     enable-ssh-exec <args>                              Configure server for SSH commands
     enable-cd                                          Show instructions for cd integration
@@ -312,6 +333,28 @@ def cd_mount_path():
     print(server['mount_path'])
     sys.exit(0)
 
+def refresh_server():
+    try:
+        server_name = sys.argv[2]
+    except IndexError:
+        print('No server given. Usage: mnt refresh <server_name>. E.g. \"mnt refresh sshfs\"')
+        sys.exit(0)
+
+    if server_name not in config['servers']:
+        print(f"Server \"{server}\" does not exist. Use command \"mnt add\" to add it.")
+        sys.exit(0)
+
+
+    config_server = config['servers'][server_name]
+    config_server['mounted_time'] = int(time.time())
+
+    save_config()
+
+    print(f"Refreshed mount time of \"{server_name}\".")
+
+    sys.exit(0)
+
+
 def enable_cd():
     print("""If the cd-command just outputs the mount path, you must install the cd-help script. To do so, add this to your .bashrc/.zshrc:
 mnt() {
@@ -359,6 +402,8 @@ if __name__ == '__main__':
             ssh_exec()
         elif command == 'enable-ssh-exec':
             enable_ssh_exec()
+        elif command == 'refresh':
+            refresh_server()
         elif command == 'help' or command == '-h':
             help()
         else:
