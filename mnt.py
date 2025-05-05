@@ -413,39 +413,38 @@ if __name__ == '__main__':
         print('No command given.')
         sys.exit(0)
 
-    if command in config['servers']:
-        mount(config['servers'][command])
-    else:
-        if command == 'mount':
-            try:
-                server = sys.argv[2]
-            except IndexError:
-                print('No server given. Usage: mnt mount <server_name>. E.g. \"mnt mount sshfs\"')
-                sys.exit(0)
-            mount(config['servers'][sys.argv[2]])
-        elif command == 'add':
-            add_server()
-        elif command == 'unmount':
-            unmount_server()
-        elif command == 'update':
-            update_server()
-        elif command == 'delete':
-            delete_server()
-        elif command == 'list':
-            list_servers()
-        elif command == 'cd':
-            cd_mount_path()
-        elif command == 'enable-cd':
-            enable_cd()
-        elif command == 'ssh-exec':
-            ssh_exec()
-        elif command == 'enable-ssh-exec':
-            enable_ssh_exec()
-        elif command == 'refresh':
-            refresh_server()
-        elif command == 'help' or command == '-h':
-            help()
-        else:
-            print('Unknown command: ' + command)
+    if command == 'mount':
+        try:
+            server = sys.argv[2]
+        except IndexError:
+            print('No server given. Usage: mnt mount <server_name>. E.g. \"mnt mount sshfs\"')
             sys.exit(0)
+        mount(config['servers'][sys.argv[2]])
+    elif command == 'add':
+        add_server()
+    elif command == 'unmount':
+        unmount_server()
+    elif command == 'update':
+        update_server()
+    elif command == 'delete':
+        delete_server()
+    elif command == 'list':
+        list_servers()
+    elif command == 'cd':
+        cd_mount_path()
+    elif command == 'enable-cd':
+        enable_cd()
+    elif command == 'ssh-exec':
+        ssh_exec()
+    elif command == 'enable-ssh-exec':
+        enable_ssh_exec()
+    elif command == 'refresh':
+        refresh_server()
+    elif command == 'help' or command == '-h':
+        help()
+    else:
+        if command in config['servers']:
+            mount(config['servers'][command])
+        print('Unknown command: ' + command)
+        sys.exit(0)
 
