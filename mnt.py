@@ -222,8 +222,9 @@ Core Commands:
 Server Management:
     add <name> <mount_cmd> <unmount_cmd> [mount_path]   Add new server configuration.
                                                             Note: If mount_path is specified, it will be appended
-                                                            to the end of your mount and unmount commands.
-    update <name> <mount|unmount> <command>             Update server commands
+                                                            to the end of your mount and unmount commands. Can be disabled using "update".
+    update <name> <prop> <command>                      Update a property on a given server.
+                                                        Type "mnt update <name> help" to see all properties you can update.
     delete <name>                                       Delete server configuration
     refresh <name>                                      Updates the mounted at time for the server
     list                                                List all configured servers

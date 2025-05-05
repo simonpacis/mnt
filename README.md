@@ -27,9 +27,13 @@ Core Commands:
     ssh-exec [server] <cmd>    Execute remote command (uses last mounted server if omitted)
 
 Server Management:
-    add <name> <mount_cmd> <unmount_cmd> [mount_path]   Add new server configuration
-    update <name> <prop> <command>                      Update server commands. Type "mnt update <name> help" to see all properties you can update.
+    add <name> <mount_cmd> <unmount_cmd> [mount_path]   Add new server configuration.
+                                                            Note: If mount_path is specified, it will be appended
+                                                            to the end of your mount and unmount commands. Can be disabled using "update".
+    update <name> <prop> <command>                      Update a property on a given server.
+                                                        Type "mnt update <name> help" to see all properties you can update.
     delete <name>                                       Delete server configuration
+    refresh <name>                                      Updates the mounted at time for the server
     list                                                List all configured servers
     enable-ssh-exec <args>                              Configure server for SSH commands
     enable-cd                                          Show instructions for cd integration
