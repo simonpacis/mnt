@@ -6,10 +6,7 @@ Note: There is *no* security built into this tool. Use only in completely truste
 
 ## Installation
 ```bash
-git clone https://github.com/simonpacis/mnt.git
-cd mnt
-mv mnt.py /usr/local/bin/mnt
-sudo chmod +x /usr/local/bin/mnt
+git clone https://github.com/simonpacis/mnt.git && cd mnt && mv mnt.py /usr/local/bin/mnt && sudo chmod +x /usr/local/bin/mnt
 ```
 
 ## Help 
