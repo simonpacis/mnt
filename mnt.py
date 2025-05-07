@@ -215,7 +215,8 @@ def mount(server):
     sys.exit(0)
 
 def help():
-    print("""mnt - Mount manager and remote execution tool
+    print("""
+mnt - Mount manager and remote execution tool
 
 Usage:
     mnt <command> [args]
