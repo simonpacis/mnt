@@ -11,43 +11,44 @@ git clone https://github.com/simonpacis/mnt.git && cd mnt && mv mnt.py /usr/loca
 
 ## Help 
 ```bash
-mnt - Mount and remote command management tool
+mnt - Mount manager and remote execution tool
 
 Usage:
-    mnt <command> [arguments]
-    mnt <server_name>          # Shortcut for 'mnt mount <server_name>'
+    mnt <command> [args]
+    mnt <server_name>                Shortcut for: mnt mount <server_name>
 
-Core Commands:
-    mount <server>             Mount a configured server
-    unmount <server>           Unmount a configured server
-    cd <server>               Change to server's mount directory (requires shell integration)
-    ssh-exec [server] <cmd>    Execute remote command (uses last mounted server if omitted)
+Commands:
+  General:
+    help                            Show this help message
+    list                            List all configured servers
+    <server_name>                   Mount server
 
-Server Management:
-    add <name> <mount_cmd> <unmount_cmd> [mount_path]   Add new server configuration.
-                                                            Note: If mount_path is specified, it will be appended
-                                                            to the end of your mount and unmount commands. Can be disabled using "update".
-    update <name> <prop> <command>                      Update a property on a given server.
-                                                        Type "mnt update <name> help" to see all properties you can update.
-    delete <name>                                       Delete server configuration
-    refresh <name>                                      Updates the mounted at time for the server
-    list                                                List all configured servers
-    enable-ssh-exec <args>                              Configure server for SSH commands
-    enable-cd                                          Show instructions for cd integration
+  Mounting:
+    mount <server_name>            Mount the specified server
+    unmount <server_name>          Unmount the specified server
+    cd <server_name>               Change to server's mount path (requires shell integration)
 
-SSH Configuration:
-    enable-ssh-exec <server> <host> <user> [key_path] [remote_dir]
-        Configure SSH access for a server
-        Example: mnt enable-ssh-exec myserver example.com user ~/.ssh/id_rsa /projects
-        * Only host and user are required
+  Server Management:
+    add <name> <mount_cmd> <unmount_cmd> [mount_path]
+                                    Add a server config. mount_path is optional.
+    update <name> <property> <value>
+                                    Update a server property. Run: mnt update <name> help
+    delete <name>                   Delete a server
+
+  SSH Execution:
+    ssh-exec [<server>] <command>  Run command on remote server
+    enable-ssh-exec <server> <host> <user> [key_path] [remote_dir] [shell] [pre_command]
+                                    Enable SSH execution support
+
+  Misc:
+    refresh <server_name>          Refresh 'mounted_time' for a server
+    enable-cd                      Show instructions for shell cd integration
 
 Examples:
-    mnt add web sshfs "user@host:/path ~/mnt/web" "umount ~/mnt/web"
-    mnt web                      # Mounts 'web' server
-    mnt cd web                   # Changes to web's mount directory
-    mnt ssh-exec web ls -la      # Run command on 'web'
-    mnt ssh-exec make            # Run on last mounted server
-    mnt enable-cd               # Show cd integration instructions
+    mnt add web "sshfs user@host:/path" "umount ~/mnt/web" ~/mnt/web
+    mnt web                        Mounts 'web'
+    mnt ssh-exec web ls -l         Executes remote command
+    mnt enable-ssh-exec web host.com user ~/.ssh/id_rsa /remote/path
 ```
 
 ## SSH Exec

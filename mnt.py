@@ -97,7 +97,7 @@ def unmount_server():
     sys.exit(0)
 
 def update_server():
-    prop_list = ["mount","unmount","mount_path","append_mount_path","host","key_path","remote_dir"]
+    prop_list = ["mount","unmount","mount_path","append_mount_path","host","key_path","remote_dir","pre_command","shell"]
     try:
         server = sys.argv[2]
         prop = sys.argv[3]
@@ -130,6 +130,10 @@ def update_server():
         config['servers'][server]['key_path'] = server_command
     elif prop == "remote_dir":
         config['servers'][server]['remote_dir'] = server_command
+    elif prop == "pre_command":
+        config['servers'][server]['pre_command'] = server_command
+    elif prop == "shell":
+        config['servers'][server]['shell'] = server_command
 
     print(f"Updated server \"{server}\" prop \"{prop}\" to \"{server_command}\"")
 
@@ -177,9 +181,13 @@ def list_servers():
             if server['host'] is not None:
                 print('- SSH Exec') 
                 print(f"  Host: {server['host']}")
-                if server['key_path'] is not None:
+                if 'shell' in server:
+                    print(f"  Shell: {server['shell']}")
+                if 'pre_command' in server:
+                    print(f"  Pre command: {server['pre_command']}")
+                if 'key_path' in server:
                     print(f"  Key path: {server['key_path']}")
-                if server['remote_dir'] is not None:
+                if 'remote_dir' in server:
                     print(f"  Remote directory: {server['remote_dir']}")
         except KeyError:
             pass
@@ -207,45 +215,47 @@ def mount(server):
     sys.exit(0)
 
 def help():
-    print("""mnt - Mount and remote command management tool
+    print("""mnt - Mount manager and remote execution tool
 
 Usage:
-    mnt <command> [arguments]
-    mnt <server_name>          # Shortcut for 'mnt mount <server_name>'
+    mnt <command> [args]
+    mnt <server_name>                Shortcut for: mnt mount <server_name>
 
-Core Commands:
-    mount <server>             Mount a configured server
-    unmount <server>           Unmount a configured server
-    cd <server>               Change to server's mount directory (requires shell integration)
-    ssh-exec [server] <cmd>    Execute remote command (uses last mounted server if omitted)
+Commands:
+  General:
+    help                            Show this help message
+    list                            List all configured servers
+    <server_name>                   Mount server
 
-Server Management:
-    add <name> <mount_cmd> <unmount_cmd> [mount_path]   Add new server configuration.
-                                                            Note: If mount_path is specified, it will be appended
-                                                            to the end of your mount and unmount commands. Can be disabled using "update".
-    update <name> <prop> <command>                      Update a property on a given server.
-                                                        Type "mnt update <name> help" to see all properties you can update.
-    delete <name>                                       Delete server configuration
-    refresh <name>                                      Updates the mounted at time for the server
-    list                                                List all configured servers
-    enable-ssh-exec <args>                              Configure server for SSH commands
-    enable-cd                                          Show instructions for cd integration
+  Mounting:
+    mount <server_name>            Mount the specified server
+    unmount <server_name>          Unmount the specified server
+    cd <server_name>               Change to server's mount path (requires shell integration)
 
-SSH Configuration:
-    enable-ssh-exec <server> <host> <user> [key_path] [remote_dir]
-        Configure SSH access for a server
-        Example: mnt enable-ssh-exec myserver example.com user ~/.ssh/id_rsa /projects
-        * Only host and user are required
+  Server Management:
+    add <name> <mount_cmd> <unmount_cmd> [mount_path]
+                                    Add a server config. mount_path is optional.
+    update <name> <property> <value>
+                                    Update a server property. Run: mnt update <name> help
+    delete <name>                   Delete a server
+
+  SSH Execution:
+    ssh-exec [<server>] <command>  Run command on remote server
+    enable-ssh-exec <server> <host> <user> [key_path] [remote_dir] [shell] [pre_command]
+                                    Enable SSH execution support
+
+  Misc:
+    refresh <server_name>          Refresh 'mounted_time' for a server
+    enable-cd                      Show instructions for shell cd integration
 
 Examples:
-    mnt add web sshfs "user@host:/path ~/mnt/web" "umount ~/mnt/web"
-    mnt web                      # Mounts 'web' server
-    mnt cd web                   # Changes to web's mount directory
-    mnt ssh-exec web ls -la      # Run command on 'web'
-    mnt ssh-exec make            # Run on last mounted server
-    mnt enable-cd               # Show cd integration instructions
+    mnt add web "sshfs user@host:/path" "umount ~/mnt/web" ~/mnt/web
+    mnt web                        Mounts 'web'
+    mnt ssh-exec web ls -l         Executes remote command
+    mnt enable-ssh-exec web host.com user ~/.ssh/id_rsa /remote/path
 """)
     sys.exit(0)
+
 
 def enable_ssh_exec():
     try:
@@ -254,8 +264,10 @@ def enable_ssh_exec():
         username = sys.argv[4]
         key_path = os.path.expanduser(sys.argv[5]) if len(sys.argv) > 5 else None
         remote_dir = sys.argv[6] if len(sys.argv) > 6 else None
+        shell = sys.argv[7] if len(sys.argv) > 7 else None
+        pre_command = sys.argv[8] if len(sys.argv) > 8 else None
     except IndexError:
-        print('Usage: mnt enable-ssh-exec <server_name> <host> <username> [<key_path>] [<remote_dir>]')
+        print('Usage: mnt enable-ssh-exec <server_name> <host> <username> [<key_path>] [<remote_dir>] [<shell>] [<pre_command>]')
         print('Example (minimal): mnt enable-ssh-exec my_server example.com user')
         print('Example (full): mnt enable-ssh-exec my_server example.com user ~/.ssh/id_rsa /projects')
         sys.exit(1)
@@ -271,6 +283,10 @@ def enable_ssh_exec():
         server['key_path'] = key_path
     if remote_dir:
         server['remote_dir'] = remote_dir
+    if shell:
+        server['shell'] = shell
+    if pre_command:
+        server['pre_command'] = pre_command
     save_config()
 
     print(f"Configured SSH execution for server '{server_name}':")
@@ -347,16 +363,28 @@ def ssh_exec():
     ssh_parts.append(server['host'])
 
     # Handle remote command construction
+    remote_cmd = ""
+    if 'shell' in server:
+        remote_cmd = server['shell'] + ' -ic "'
     if 'remote_dir' in server:
         # Use sh -c for better quoting behavior
-        remote_cmd = f"cd {shlex.quote(server['remote_dir'])} && {command}"
-    else:
-        remote_cmd = command
+        remote_cmd = remote_cmd + f"cd {shlex.quote(server['remote_dir'])} && "
+    if 'pre_command' in server:
+        remote_cmd = remote_cmd + server['pre_command'] + " && "
+
+    remote_cmd = remote_cmd + command
+
+    if 'shell' in server:
+        remote_cmd = remote_cmd + '" '
+
 
     # Execute with proper shell handling
     full_cmd = ssh_parts + [remote_cmd]
-
-    print(command)
+    
+    if 'pre_command' in server:
+        print(f"[{server_name}:{server['remote_dir']}] {server['pre_command']} && {command}")
+    else:
+        print(f"[{server_name}:{server['remote_dir']}] {command}")
     p = subprocess.Popen(full_cmd, stderr=subprocess.PIPE)
     _, stderr = p.communicate()
 
