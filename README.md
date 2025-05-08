@@ -11,44 +11,61 @@ git clone https://github.com/simonpacis/mnt.git && cd mnt && mv mnt.py /usr/loca
 
 ## Help 
 ```bash
+def help():
+    print("""
 mnt - Mount manager and remote execution tool
 
 Usage:
     mnt <command> [args]
-    mnt <server_name>                Shortcut for: mnt mount <server_name>
+    mnt <server_name>                Mount specified server (shortcut for 'mnt mount')
 
 Commands:
   General:
     help                            Show this help message
-    list                            List all configured servers
-    <server_name>                   Mount server
-
-  Mounting:
-    mount <server_name>            Mount the specified server
-    unmount <server_name>          Unmount the specified server
-    cd <server_name>               Change to server's mount path (requires shell integration)
+    list                            List all configured servers and aliases
 
   Server Management:
-    add <name> <mount_cmd> <unmount_cmd> [mount_path]
-                                    Add a server config. mount_path is optional.
-    update <name> <property> <value>
-                                    Update a server property. Run: mnt update <name> help
-    delete <name>                   Delete a server
+    add                             Interactive server setup wizard
+    alias                           Create a new server alias
+    delete <name>                   Delete a server or alias
+    update <name> <property> <value> Update server properties:
+        Properties: command, unmount_command, mount_path, append_mount_path,
+                   host, key_path, remote_dir, pre_command, shell
 
-  SSH Execution:
-    ssh-exec [<server>] <command>  Run command on remote server
-    enable-ssh-exec <server> <host> <user> [key_path] [remote_dir] [shell] [pre_command]
-                                    Enable SSH execution support
+  Mount Operations:
+    mount <name>                    Mount a server/alias
+    unmount <name>                  Unmount a server/alias
+    refresh <name>                  Update mounted timestamp
 
-  Misc:
-    refresh <server_name>          Refresh 'mounted_time' for a server
-    enable-cd                      Show instructions for shell cd integration
+  Remote Execution:
+    ssh-exec [<name>] <command>     Execute command on remote server
+                                    - Auto-detects from cwd or last mounted
+    enable-ssh-exec <name> <host> <user> [key_path] [remote_dir] [shell] [pre_command]
+                                    Configure SSH execution for a server
+
+  Navigation:
+    cd <name>                       Output mount path for shell integration
+    enable-cd                       Show shell integration instructions
 
 Examples:
-    mnt add web "sshfs user@host:/path" "umount ~/mnt/web" ~/mnt/web
-    mnt web                        Mounts 'web'
-    mnt ssh-exec web ls -l         Executes remote command
-    mnt enable-ssh-exec web host.com user ~/.ssh/id_rsa /remote/path
+    mnt add                         # Interactive server setup
+    mnt alias                       # Create alias for existing server
+    mnt web                         # Mount server 'web'
+    mnt ssh-exec web ls -l          # Execute command on 'web'
+    mnt update web host user@newhost.com  # Update host property
+
+Server Properties:
+    command:        Mount command (e.g. sshfs)
+    unmount_command: Unmount command (e.g. fusermount -u)
+    mount_path:     Local mount path
+    append_mount_path: Whether to append mount path to command (bool)
+    host:           Remote host (user@host)
+    key_path:       SSH key path
+    remote_dir:     Remote directory path
+    pre_command:    Command to run before main command
+    shell:          Remote shell (e.g. bash)
+""")
+    sys.exit(0)
 ```
 
 ## SSH Exec
