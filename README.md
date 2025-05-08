@@ -11,8 +11,6 @@ git clone https://github.com/simonpacis/mnt.git && cd mnt && mv mnt.py /usr/loca
 
 ## Help 
 ```bash
-def help():
-    print("""
 mnt - Mount manager and remote execution tool
 
 Usage:
@@ -64,8 +62,6 @@ Server Properties:
     remote_dir:     Remote directory path
     pre_command:    Command to run before main command
     shell:          Remote shell (e.g. bash)
-""")
-    sys.exit(0)
 ```
 
 ## SSH Exec
