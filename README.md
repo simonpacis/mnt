@@ -38,6 +38,7 @@ Commands:
   Remote Execution:
     ssh-exec [<name>] <command>     Execute command on remote server
                                     - Auto-detects from cwd or last mounted
+    ssh <name>                      Logs into an SSH shell
 
   Navigation:
     cd <name>                       Output mount path for shell integration

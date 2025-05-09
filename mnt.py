@@ -92,6 +92,9 @@ class Server:
         command = f"{self.get('command')} {self.get('host')}"
         if self.remote_dir:
             command = command + f":{self.get('remote_dir')}"
+        if self.key_path:
+            key_path = os.path.expanduser(self.get('key_path'))
+            command = command + f" -o IdentityFile={key_path}"
         if self.append_mount_path:
             command = command + f" {self.get('mount_path')}"
             if not os.path.exists(self.get('mount_path')):
@@ -150,7 +153,10 @@ class Server:
                     print(f"--- {alias['name']} --- {'(latest)' if alias['name'] == last_mounted_server() else ''}")
                     for prop in alias:
                         if prop != 'server_name' and prop != 'name':
-                            print(f"  {prop}: {alias[prop]}")
+                            if prop == 'mounted_time':
+                                print(f"  {prop}: {alias[prop]} {'(latest)' if alias['name'] == last_mounted_server() else ''}")
+                            else:
+                                print(f"  {prop}: {alias[prop]}")
 
             print('')
 
@@ -432,6 +438,12 @@ def delete_server():
         print(f"Server \"{server}\" does not exist. Use command \"mnt add <server_name> <command>\" to add it.")
         sys.exit(0)
 
+    sure = ""
+    while sure != "y" and sure != "Y" and sure != "n" and sure != "N":
+        sure = input(f"Are you sure you want to delete server \"{server}\"? (y/n) ")
+        if sure == "n" or sure == "N":
+            sys.exit(0)
+
     if server in config['aliases']:
         del config['aliases'][server]
     elif server in config['servers']:
@@ -449,39 +461,6 @@ def list_servers():
         server = get_server(None, server)
         server.list()
 
-    sys.exit(0)
-
-    last_mounted = last_mounted_server()
-    for server in config['servers']:
-        server = config['servers'][server]
-        if server['name'] == last_mounted:
-            print(f"--- {server['name']} (latest) ---")
-        else:
-            print(f"--- {server['name']} ---")
-        print(f"Mount command: \"{server['command']}\"")
-        print(f"Unmount command: \"{server['unmount_command']}\"")
-        if server['name'] == last_mounted:
-            print(f"Mounted at: {server['mounted_time']} (latest)")
-        else:
-            print(f"Mounted at: {server['mounted_time']}")
-        if server['mount_path'] is not None:
-            print(f"Mount path: {server['mount_path']}")
-            print(f"Append mount path? {server['append_mount_path']}")
-        try:
-            if server['host'] is not None:
-                print('- SSH Exec') 
-                print(f"  Host: {server['host']}")
-                if 'shell' in server:
-                    print(f"  Shell: {server['shell']}")
-                if 'pre_command' in server:
-                    print(f"  Pre command: {server['pre_command']}")
-                if 'key_path' in server:
-                    print(f"  Key path: {server['key_path']}")
-                if 'remote_dir' in server:
-                    print(f"  Remote directory: {server['remote_dir']}")
-        except KeyError:
-            pass
-        print('')
     sys.exit(0)
 
 def mount(config_server):
@@ -517,8 +496,7 @@ Commands:
   Remote Execution:
     ssh-exec [<name>] <command>     Execute command on remote server
                                     - Auto-detects from cwd or last mounted
-    enable-ssh-exec <name> <host> <user> [key_path] [remote_dir] [shell] [pre_command]
-                                    Configure SSH execution for a server
+    ssh <name>                      Logs into an SSH shell
 
   Navigation:
     cd <name>                       Output mount path for shell integration
@@ -544,48 +522,6 @@ Server Properties:
 """)
     sys.exit(0)
 
-
-def enable_ssh_exec():
-    try:
-        server_name = sys.argv[2]
-        host = sys.argv[3]
-        username = sys.argv[4]
-        key_path = os.path.expanduser(sys.argv[5]) if len(sys.argv) > 5 else None
-        remote_dir = sys.argv[6] if len(sys.argv) > 6 else None
-        shell = sys.argv[7] if len(sys.argv) > 7 else None
-        pre_command = sys.argv[8] if len(sys.argv) > 8 else None
-    except IndexError:
-        print('Usage: mnt enable-ssh-exec <server_name> <host> <username> [<key_path>] [<remote_dir>] [<shell>] [<pre_command>]')
-        print('Example (minimal): mnt enable-ssh-exec my_server example.com user')
-        print('Example (full): mnt enable-ssh-exec my_server example.com user ~/.ssh/id_rsa /projects')
-        sys.exit(1)
-
-    if server_name not in config['servers']:
-        print(f'Error: Server "{server_name}" does not exist. Create it first with "mnt add"')
-        sys.exit(1)
-
-    # Update existing server configuration
-    server = config['servers'][server_name]
-    server['host'] = f"{username}@{host}"
-    if key_path:
-        server['key_path'] = key_path
-    if remote_dir:
-        server['remote_dir'] = remote_dir
-    if shell:
-        server['shell'] = shell
-    if pre_command:
-        server['pre_command'] = pre_command
-    save_config()
-
-    print(f"Configured SSH execution for server '{server_name}':")
-    print(f"- Host: {username}@{host}")
-    if key_path:
-        print(f"- SSH Key: {key_path}")
-    if remote_dir:
-        print(f"-  Remote directory: {remote_dir}")
-    print("\nNote: Only host is required. Other fields are optional.")
-
-    sys.exit(0)
 
 def last_mounted_server():
     """Returns name of most recently mounted server or alias, or None"""
@@ -615,6 +551,22 @@ def get_server_from_mount_path(cwd):
             if entry['mount_path'] == cwd:
                 return name
     return None
+
+def ssh_shell():
+    server = get_server(2)
+
+    cmd = f"ssh -t {server.get('host')}"
+    if server.get('key_path') is not None:
+        cmd += f" -i {os.path.expanduser(server.get('key_path'))}"
+
+    # Properly structure the remote command to first cd then start shell
+    remote_cmd = f"'cd {server.get('remote_dir')} && {server.get('shell')} --login'"
+    cmd += f" {remote_cmd}"
+
+    print(cmd)
+    os.system(cmd)
+    sys.exit(0)
+
 
 def ssh_exec():
     try:
@@ -776,6 +728,8 @@ if __name__ == '__main__':
         enable_cd()
     elif command == 'ssh-exec':
         ssh_exec()
+    elif command == 'ssh':
+        ssh_shell()
     elif command == 'refresh':
         refresh_server()
     elif command == 'help' or command == '-h':
