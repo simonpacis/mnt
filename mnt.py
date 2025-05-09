@@ -31,7 +31,7 @@ def setup_config():
 
 class Server:
 
-    prop_list = ["command","unmount_command","mounted_time","mount_path","append_mount_path","host","key_path","remote_dir","pre_command","shell"]
+    prop_list = ["name", "command","unmount_command","mounted_time","mount_path","append_mount_path","host","key_path","remote_dir","pre_command","shell"]
 
     def __init__(self, name, parent_name, command, unmount_command, append_mount_path, mounted_time, mount_path, is_alias = False, aliased_properties = [], host=None, key_path=None, remote_dir=None, pre_command=None, shell=None):
         self.is_alias = is_alias
@@ -271,20 +271,21 @@ def add_server():
     while host == "":
         host = input("Enter host: (e.g. user@example.com) ")
 
-    key_path = ""
-    while key_path == "":
-        do_key_path = ""
-        while do_key_path == "":
-            do_key_path = input("Use key path? (y/n) ")
-            if do_key_path == "y" or do_key_path == "Y":
-                key_path = input("Enter key path: (e.g. ~/.ssh/my_key) ")
-            else:
-                do_key_path = None
-                key_path = None
-
     remote_dir = ""
     while remote_dir == "":
         remote_dir = input("Enter remote directory: (e.g. /var/www/public_html) ")
+
+    do_key_path = ""
+    while do_key_path == "":
+        do_key_path = input("Use key path? (y/n) ")
+        if do_key_path == "y" or do_key_path == "Y":
+            key_path = ""
+            while key_path == "":
+                key_path = input("Enter key path: (e.g. ~/.ssh/my_key) ")
+        else:
+            do_key_path = None
+            key_path = None
+
 
     ssh_exec = ""
     shell = None
@@ -328,7 +329,7 @@ def add_server():
 
     server.save_server()
 
-    print(f"Added server \"{server}\"")
+    print(f"Added server \"{server_name}\"")
 
     sys.exit(0)
 
