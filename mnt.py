@@ -114,12 +114,36 @@ class Server:
         os.system(cmd)
         sys.exit(0)
 
-    def unmount(self):
+    def unmount(self, exit = True, indent = False):
         cmd = self.assemble_unmount_command()
-        print(cmd)
+        if indent:
+            print(f"    {cmd}")
+        else:
+            print(cmd)
         self.set("mounted_time", None)
-        os.system(cmd)
-        sys.exit(0)
+        result = subprocess.run(
+            cmd, 
+            shell=True, 
+            check=False,
+            capture_output=True, 
+            text=True
+        )
+
+        if result.stdout:
+            for line in result.stdout.splitlines():
+                if indent:
+                    print(f"    {line}")
+                else:
+                    print(line)
+
+        if result.stderr:
+            for line in result.stderr.splitlines():
+                if indent:
+                    print(f"    {line}")
+                else:
+                    print(line)
+        if exit:
+            sys.exit(0)
 
     def is_latest(self):
         if self.name == last_mounted_server():
@@ -381,6 +405,23 @@ def add_alias():
     sys.exit(0)
 
 def unmount_server():
+    if sys.argv[2] == "all":
+        print('Unmounting all servers')
+        for server_name in config['servers']:
+            print(f"Unmounting server \"{server_name}\"")
+            server = get_server(None, server_name)
+            try:
+                server.unmount(False, True)
+            except Exception:
+                continue
+        for alias in config['aliases']:
+            server = get_server(None, alias)
+            print(f"Unmounting server \"{server.name}\"")
+            try:
+                server.unmount(False, True)
+            except Exception:
+                continue
+        sys.exit(0)
     server = get_server(2)
     server.unmount()
 
@@ -491,7 +532,7 @@ Commands:
 
   Mount Operations:
     mount <name>                    Mount a server/alias
-    unmount <name>                  Unmount a server/alias
+    unmount <name|all>              Unmount a server/alias, or all of them
     refresh <name>                  Update mounted timestamp
 
   Remote Execution:

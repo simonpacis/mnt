@@ -32,7 +32,7 @@ Commands:
 
   Mount Operations:
     mount <name>                    Mount a server/alias
-    unmount <name>                  Unmount a server/alias
+    unmount <name|all>              Unmount a server/alias, or all of them
     refresh <name>                  Update mounted timestamp
 
   Remote Execution:
