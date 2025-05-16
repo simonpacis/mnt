@@ -31,9 +31,9 @@ def setup_config():
 
 class Server:
 
-    prop_list = ["name", "command","unmount_command","mounted_time","mount_path","append_mount_path","host","key_path","remote_dir","pre_command","shell"]
+    prop_list = ["name", "command","unmount_command","mounted_time","mount_path","append_mount_path","host","key_path","remote_dir","pre_command","shell","port"]
 
-    def __init__(self, name, parent_name, command, unmount_command, append_mount_path, mounted_time, mount_path, is_alias = False, aliased_properties = [], host=None, key_path=None, remote_dir=None, pre_command=None, shell=None):
+    def __init__(self, name, parent_name, command, unmount_command, append_mount_path, mounted_time, mount_path, is_alias = False, aliased_properties = [], host=None, key_path=None, remote_dir=None, pre_command=None, shell=None, port=22):
         self.is_alias = is_alias
         self.name = name
         self.parent_name = parent_name 
@@ -47,6 +47,7 @@ class Server:
         self.remote_dir = remote_dir
         self.pre_command = pre_command
         self.shell = shell
+        self.port = port
         self.aliased_properties = aliased_properties
 
     def store_if_not_aliased(self, prop):
@@ -89,17 +90,28 @@ class Server:
         save_config()
 
     def assemble_mount_command(self):
-        command = f"{self.get('command')} {self.get('host')}"
-        if self.remote_dir:
-            command = command + f":{self.get('remote_dir')}"
-        if self.key_path:
-            key_path = os.path.expanduser(self.get('key_path'))
-            command = command + f" -o IdentityFile={key_path}"
-        if self.append_mount_path:
-            command = command + f" {self.get('mount_path')}"
-            if not os.path.exists(self.get('mount_path')):
-                os.makedirs(self.get('mount_path'), exist_ok=True)
-        return command
+        if self.get('command') == "sshfs":
+            if self.get('port') is not None:
+                command = f"{self.get('command')} -p {self.get('port')} {self.get('host')}"
+            else:
+                command = f"{self.get('command')} {self.get('host')}"
+            if self.remote_dir:
+                command = command + f":{self.get('remote_dir')}"
+            if self.key_path:
+                key_path = os.path.expanduser(self.get('key_path'))
+                command = command + f" -o IdentityFile={key_path}"
+            if self.append_mount_path:
+                command = command + f" {self.get('mount_path')}"
+                if not os.path.exists(self.get('mount_path')):
+                    os.makedirs(self.get('mount_path'), exist_ok=True)
+            return command
+        else:
+            command = f"{self.get('command')}"
+            if self.append_mount_path:
+                command = command + f" {self.get('mount_path')}"
+                if not os.path.exists(self.get('mount_path')):
+                    os.makedirs(self.get('mount_path'), exist_ok=True)
+            return command
 
     def assemble_unmount_command(self):
         command = f"{self.get('unmount_command')}"
@@ -241,6 +253,7 @@ def get_server(index = 2, server_name = None):
     remote_dir = get_server_or_alias_prop('remote_dir', server, alias, aliased_properties)
     pre_command = get_server_or_alias_prop('pre_command', server, alias, aliased_properties)
     shell = get_server_or_alias_prop('shell', server, alias, aliased_properties)
+    port = get_server_or_alias_prop('port', server, alias, aliased_properties)
 
     return Server(
             name,
@@ -256,7 +269,8 @@ def get_server(index = 2, server_name = None):
             key_path,
             remote_dir,
             pre_command,
-            shell
+            shell,
+            port
             )
 
 
@@ -280,6 +294,18 @@ def add_server():
     command = ""
     while command == "":
         command = input("Enter mount command: (e.g. sshfs) ")
+
+    do_port = ""
+    while do_port == "":
+        do_port = input("Use a port different than 22? (y/n) ")
+        if do_port == "y" or do_port == "Y":
+            port = ""
+            while port == "":
+                port = input("Enter port: (e.g. 9000) ")
+        else:
+            do_port = None
+            port = None
+
 
     unmount_command = ""
     while unmount_command == "":
@@ -348,7 +374,8 @@ def add_server():
             key_path,
             remote_dir,
             pre_command,
-            shell
+            shell,
+            port
             )
 
     server.save_server()
@@ -426,7 +453,7 @@ def unmount_server():
     server.unmount()
 
 def update_server():
-    prop_list = ["mount","unmount","mount_path","append_mount_path","host","key_path","remote_dir","pre_command","shell"]
+    prop_list = ["mount","unmount","mount_path","append_mount_path","host","key_path","remote_dir","pre_command","shell","port"]
     try:
         server = sys.argv[2]
         prop = sys.argv[3]
@@ -597,7 +624,10 @@ def get_server_from_mount_path(cwd):
 def ssh_shell():
     server = get_server(2)
 
-    cmd = f"ssh -t {server.get('host')}"
+    if server.get('port') is not None:
+        cmd = f"ssh -p {server.get('port')} -t {server.get('host')}"
+    else:
+        cmd = f"ssh -t {server.get('host')}"
     if server.get('key_path') is not None:
         cmd += f" -i {os.path.expanduser(server.get('key_path'))}"
 
@@ -637,6 +667,8 @@ def ssh_exec():
 
     # Build SSH command components
     ssh_parts = ['ssh', '-tt']  # Force pseudo-terminal allocation
+    if server.get('port') is not None:
+        ssh_parts.extend(['-p', str(server.get('port'))])
 
     # Add identity file if specified
     if server.get('key_path') is not None:
