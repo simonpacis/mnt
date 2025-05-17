@@ -705,6 +705,7 @@ def mount(config_server):
     server.mount()
 
 def help():
+    print_styled('mnt.py', ["bold","italic"])
     print("""
 mnt - Mount manager and remote execution tool
 
@@ -940,6 +941,7 @@ if __name__ == '__main__':
     try:
         command = sys.argv[1]
     except IndexError:
+        print_styled('mnt.py', ["bold","italic"])
         print_styled('No command given.', "red")
         sys.exit(0)
 

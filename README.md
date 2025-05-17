@@ -24,6 +24,7 @@ Commands:
 
   Server Management:
     add                             Interactive server setup wizard
+    tunnel                          Interactive SSH tunnel setup wizard
     alias                           Create a new server alias
     delete <name>                   Delete a server or alias
     update <name> <property> <value> Update server properties:
