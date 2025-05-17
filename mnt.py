@@ -251,6 +251,8 @@ class Server:
             print(f"Mounted at: {self.get('mounted_time')} {'(latest)' if self.is_latest() else ''}")
             print(f"Mount path: {self.get('mount_path')}")
             print(f"Remote directory: {self.get('remote_dir')}")
+            if self.get('port') is not None:
+                print(f"Port: {self.get('port')}")
             if self.get('shell') is not None:
                 print('- SSH Exec')
                 print(f"  Shell: {self.get('shell')}")
@@ -258,6 +260,15 @@ class Server:
                 print(f"  Pre command: {self.get('pre_command')}")
             if self.get('key_path') is not None:
                 print(f"  Key path: {self.get('key_path')}")
+            if self.get('tunnel_port') is not None:
+                print('- SSH Tunnel')
+                print(f"  Local tunnel port: {self.get('tunnel_port')}")
+                print(f"  Remote tunnel port: {self.get('remote_tunnel_port')}")
+                print(f"  Tunnel host: {self.get('tunnel_host')}")
+                print(f"  Tunnel username: {self.get('tunnel_username')}")
+                print(f"  Tunnel destination: {self.get('tunnel_forwarded_host')}")
+                if self.get('tunnel_key_path') is not None:
+                    print(f"  Tunnel key path: {self.get('tunnel_key_path')}")
             print_alias = False
             for alias in config['aliases']:
                 alias = config['aliases'][alias]
@@ -471,6 +482,12 @@ def add_server():
 
     server.save_server()
 
+    do_tunnel = ""
+    while tunnel == "":
+        do_tunnel = input("Does this server require an SSH tunnel to be opened before mounting? (y/n) ")
+        if do_tunnel == "y" or do_tunnel == "Y":
+            add_tunnel(server_name, False)
+
     print_styled(f"Added server \"{server_name}\"", "green")
 
     sys.exit(0)
@@ -520,33 +537,36 @@ def add_alias():
     save_config()
     sys.exit(0)
 
-def add_tunnel():
-    try:
-        servers = []
-        for i, server_name in enumerate(config['servers']):
-            servers.append(server_name)
-            print(f"{i+1}) {server_name}")
-        server_name = input("Choose which server you want to add tunnel to: ")
-        server_name = servers[int(server_name) - 1]
-    except IndexError:
-        print_styled('Index does not exist.', "red")
-        sys.exit(0)
+def add_tunnel(server_name = None, exit = True):
+    if server_name is None:
+        try:
+            servers = []
+            for i, server_name in enumerate(config['servers']):
+                servers.append(server_name)
+                print(f"{i+1}) {server_name}")
+            server_name = input("Choose which server you want to add tunnel to: ")
+            server_name = servers[int(server_name) - 1]
+        except IndexError:
+            print_styled('Index does not exist.', "red")
+            sys.exit(0)
     server = get_server(None, server_name)
 
     tunnel_port = ""
     while tunnel_port == "":
-        tunnel_port = input("Enter local tunnel port (the port you want to access if from locally): ")
+        tunnel_port = input("Enter local tunnel port (the port you want to access from locally): ")
     tunnel_username = ""
     while tunnel_username == "":
-        tunnel_username = input("Enter tunnel username (e.g. root): ")
+        tunnel_username = input("Enter username for tunnel server (e.g. root): ")
     tunnel_host = ""
     while tunnel_host == "":
-        tunnel_host = input("Enter tunnel host (without username, e.g. example.com): ")
+        tunnel_host = input("Enter tunnel server host (e.g. example.com): ")
+
+    tunnel_forwarded_host = ""
     while tunnel_forwarded_host == "":
-        tunnel_forwarded_host = input("Enter tunnel forwarded host (the end server you want to log in to through the tunnel) (e.g. 127.0.0.1): ")
+        tunnel_forwarded_host = input("Enter destination server host (the end server you want to log in to through the tunnel) (e.g. example-2.com): ")
     remote_tunnel_port = ""
     while remote_tunnel_port == "":
-        remote_tunnel_port = input("Enter remote tunnel port (the port you use to log in to the server with): ")
+        remote_tunnel_port = input("Enter remote tunnel port (the port you use to log in to the server with, typically 22): ")
 
     tunnel_key_path = input("Enter tunnel key path (blank for no key): ")
     if tunnel_key_path == "":
@@ -561,7 +581,8 @@ def add_tunnel():
 
     print_styled(f"Added tunnel for server \"{server.name}\"", "green")
 
-    sys.exit(0)
+    if exit:
+        sys.exit(0)
 
 def unmount_server():
     if sys.argv[2] == "all":
@@ -622,6 +643,21 @@ def update_server():
         config['servers'][server]['pre_command'] = server_command
     elif prop == "shell":
         config['servers'][server]['shell'] = server_command
+    elif prop == "port":
+        config['servers'][server]['port'] = server_command
+    elif prop == "tunnel_port":
+        config['servers'][server]['tunnel_port'] = server_command
+    elif prop == "tunnel_host":
+        config['servers'][server]['tunnel_host'] = server_command
+    elif prop == "tunnel_key_path":
+        config['servers'][server]['tunnel_key_path'] = server_command
+    elif prop == "remote_tunnel_port":
+        config['servers'][server]['remote_tunnel_port'] = server_command
+    elif prop == "tunnel_username":
+        config['servers'][server]['tunnel_username'] = server_command
+    elif prop == "tunnel_forwarded_host":
+        config['servers'][server]['tunnel_forwarded_host'] = server_command
+
 
     print_styled(f"Updated server \"{server}\" prop \"{prop}\" to \"{server_command}\"", "green")
 
