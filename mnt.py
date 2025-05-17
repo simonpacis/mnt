@@ -111,9 +111,9 @@ def print_styled(text, style=None, newline=True):
 
 class Server:
 
-    prop_list = ["name", "command","unmount_command","mounted_time","mount_path","append_mount_path","host","key_path","remote_dir","pre_command","shell","port"]
+    prop_list = ["name", "command","unmount_command","mounted_time","mount_path","append_mount_path","host","key_path","remote_dir","pre_command","shell","port","tunnel_port","tunnel_host","tunnel_username","tunnel_key_path","remote_tunnel_port","tunnel_forwarded_host"]
 
-    def __init__(self, name, parent_name, command, unmount_command, append_mount_path, mounted_time, mount_path, is_alias = False, aliased_properties = [], host=None, key_path=None, remote_dir=None, pre_command=None, shell=None, port="22"):
+    def __init__(self, name, parent_name, command, unmount_command, append_mount_path, mounted_time, mount_path, is_alias = False, aliased_properties = [], host=None, key_path=None, remote_dir=None, pre_command=None, shell=None, port="22", tunnel_port=None, tunnel_host=None, tunnel_key_path=None, remote_tunnel_port=None, tunnel_username=None, tunnel_forwarded_host=None):
         self.is_alias = is_alias
         self.name = name
         self.parent_name = parent_name 
@@ -128,6 +128,12 @@ class Server:
         self.pre_command = pre_command
         self.shell = shell
         self.port = port
+        self.tunnel_port = tunnel_port 
+        self.tunnel_host = tunnel_host
+        self.tunnel_key_path = tunnel_key_path
+        self.remote_tunnel_port = remote_tunnel_port
+        self.tunnel_username = tunnel_username
+        self.tunnel_forwarded_host = tunnel_forwarded_host
         self.aliased_properties = aliased_properties
 
     def store_if_not_aliased(self, prop):
@@ -199,8 +205,22 @@ class Server:
             command = command + f" {self.get('mount_path')}"
         return command
 
+    def setup_tunnel(self):
+        cmd = f"ssh -f -N -L {self.get('tunnel_port')}:{self.get('tunnel_forwarded_host')}:{self.get('remote_tunnel_port')} {self.get('tunnel_username')}@{self.get('tunnel_host')}"
+        if self.get('tunnel_key_path') is not None:
+            cmd += f" -i {os.path.expanduser(self.get('tunnel_key_path'))}"
+        print_styled(cmd, "italic")
+        run_command(cmd, indent = False)
+
+    def destroy_tunnel(self):
+        cmd = f"kill $(lsof -ti :{self.tunnel_port})"
+        print_styled(cmd, "italic")
+        run_command(cmd, indent = False)
+
     def mount(self, exit = True, indent = False):
         self.set("mounted_time", int(time.time()))
+        if self.get("tunnel_port") is not None:
+            self.setup_tunnel()
         cmd = self.assemble_mount_command()
         print_styled(cmd, "italic")
         run_command(cmd, indent)
@@ -209,6 +229,8 @@ class Server:
 
     def unmount(self, exit = True, indent = False):
         cmd = self.assemble_unmount_command()
+        if self.get("tunnel_port") is not None:
+            self.destroy_tunnel()
         print_styled(cmd, "italic")
         run_command(cmd, indent)
         if exit:
@@ -311,6 +333,12 @@ def get_server(index = 2, server_name = None):
     pre_command = get_server_or_alias_prop('pre_command', server, alias, aliased_properties)
     shell = get_server_or_alias_prop('shell', server, alias, aliased_properties)
     port = get_server_or_alias_prop('port', server, alias, aliased_properties)
+    tunnel_port = get_server_or_alias_prop('tunnel_port', server, alias, aliased_properties)
+    tunnel_host = get_server_or_alias_prop('tunnel_host', server, alias, aliased_properties)
+    tunnel_key_path = get_server_or_alias_prop('tunnel_key_path', server, alias, aliased_properties)
+    remote_tunnel_port = get_server_or_alias_prop('remote_tunnel_port', server, alias, aliased_properties)
+    tunnel_username = get_server_or_alias_prop('tunnel_username', server, alias, aliased_properties)
+    tunnel_forwarded_host = get_server_or_alias_prop('tunnel_forwarded_host', server, alias, aliased_properties)
 
     return Server(
             name,
@@ -327,7 +355,13 @@ def get_server(index = 2, server_name = None):
             remote_dir,
             pre_command,
             shell,
-            port
+            port,
+            tunnel_port,
+            tunnel_host,
+            tunnel_key_path,
+            remote_tunnel_port,
+            tunnel_username,
+            tunnel_forwarded_host
             )
 
 
@@ -482,10 +516,50 @@ def add_alias():
         mount_path = input("Enter mount path: (e.g. /mnt) ")
         config['aliases'][alias]['mount_path'] = mount_path
 
-
-
     print_styled(f"Added alias \"{alias}\" for server \"{server_name}\"", "green")
     save_config()
+    sys.exit(0)
+
+def add_tunnel():
+    try:
+        servers = []
+        for i, server_name in enumerate(config['servers']):
+            servers.append(server_name)
+            print(f"{i+1}) {server_name}")
+        server_name = input("Choose which server you want to add tunnel o: ")
+        server_name = servers[int(server_name) - 1]
+    except IndexError:
+        print_styled('Index does not exist.', "red")
+        sys.exit(0)
+    server = get_server(None, server_name)
+
+    tunnel_port = ""
+    while tunnel_port == "":
+        tunnel_port = input("Enter local tunnel port (the port you want to access if from locally): ")
+    tunnel_username = ""
+    while tunnel_username == "":
+        tunnel_username = input("Enter tunnel username (e.g. root): ")
+    tunnel_host = ""
+    while tunnel_host == "":
+        tunnel_host = input("Enter tunnel host (without username, e.g. example.com): ")
+    while tunnel_forwarded_host == "":
+        tunnel_forwarded_host = input("Enter tunnel forwarded host (e.g. 127.0.0.1): ")
+    remote_tunnel_port = ""
+    while remote_tunnel_port == "":
+        remote_tunnel_port = input("Enter remote tunnel port (the port you use to log in to the server with): ")
+
+    tunnel_key_path = input("Enter tunnel key path (blank for no key): ")
+    if tunnel_key_path == "":
+        tunnel_key_path = None
+
+    server.set('tunnel_port', tunnel_port)
+    server.set('tunnel_host', tunnel_host)
+    server.set('tunnel_key_path', tunnel_key_path)
+    server.set('remote_tunnel_port', remote_tunnel_port)
+    server.set('tunnel_username', tunnel_username)
+
+    print_styled(f"Added tunnel for server \"{server.name}\"", "green")
+
     sys.exit(0)
 
 def unmount_server():
@@ -500,7 +574,7 @@ def unmount_server():
                 continue
         for alias in config['aliases']:
             server = get_server(None, alias)
-            print_styled(f"Unmounting server \"{server_name}\"", "cyan")
+            print_styled(f"Unmounting server \"{alias}\"", "cyan")
             try:
                 server.unmount(False, True)
             except Exception:
@@ -510,7 +584,7 @@ def unmount_server():
     server.unmount()
 
 def update_server():
-    prop_list = ["mount","unmount","mount_path","append_mount_path","host","key_path","remote_dir","pre_command","shell","port"]
+    prop_list = ["mount","unmount","mount_path","append_mount_path","host","key_path","remote_dir","pre_command","shell","port","tunnel_port","tunnel_host","tunnel_key_path","remote_tunnel_port","tunnel_username","tunnel_forwarded_host"]
     try:
         server = sys.argv[2]
         prop = sys.argv[3]
@@ -802,7 +876,7 @@ def cd_mount_path():
         print_styled(f"Server \"{server_name}\" does not have a mount path.", "red")
         sys.exit(1)
 
-    print_styled(server.get('mount_path'), "italic")
+    print(server.get('mount_path'))
     sys.exit(0)
 
 def refresh_server():
@@ -867,6 +941,8 @@ if __name__ == '__main__':
         ssh_shell()
     elif command == 'refresh':
         refresh_server()
+    elif command == 'tunnel':
+        add_tunnel()
     elif command == 'help' or command == '-h':
         help()
     else:
