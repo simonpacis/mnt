@@ -29,11 +29,91 @@ def setup_config():
         sys.exit(0)
     return config
 
+def run_command(cmd, indent = False):
+    result = subprocess.run(
+        cmd, 
+        shell=True, 
+        check=False,
+        capture_output=True, 
+        text=True
+    )
+
+    if result.stdout:
+        for line in result.stdout.splitlines():
+            if indent:
+                print(f"    {line}")
+            else:
+                print(line)
+
+    if result.stderr:
+        for line in result.stderr.splitlines():
+            if indent:
+                print(f"    {line}")
+            else:
+                print(line)
+
+def print_styled(text, style=None, newline=True):
+    """
+    Prints text with specified styles (bold, italic, colors) using ANSI escape codes.
+
+    Args:
+        text (str): The text to print
+        style (str or list): Style(s) to apply. Can be:
+            - "bold", "italic", "underline"
+            - "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"
+            - "light_black", "light_red", etc. for lighter colors
+        newline (bool): If True (default), adds a newline at the end
+    """
+    # ANSI escape codes for styles
+    styles = {
+        # Text styles
+        'bold': '\033[1m',
+        'italic': '\033[3m',
+        'underline': '\033[4m',
+        # Colors
+        'black': '\033[30m',
+        'red': '\033[31m',
+        'green': '\033[32m',
+        'yellow': '\033[33m',
+        'blue': '\033[34m',
+        'magenta': '\033[35m',
+        'cyan': '\033[36m',
+        'white': '\033[37m',
+        # Light colors
+        'light_black': '\033[90m',
+        'light_red': '\033[91m',
+        'light_green': '\033[92m',
+        'light_yellow': '\033[93m',
+        'light_blue': '\033[94m',
+        'light_magenta': '\033[95m',
+        'light_cyan': '\033[96m',
+        'light_white': '\033[97m',
+    }
+
+    # Reset code
+    reset = '\033[0m'
+
+    # Process styles
+    style_codes = []
+    if style:
+        if isinstance(style, str):
+            style = [style]
+        for s in style:
+            if s in styles:
+                style_codes.append(styles[s])
+
+    # Apply styles
+    styled_text = ''.join(style_codes) + text + reset
+
+    # Print with or without newline
+    end = '\n' if newline else ''
+    print(styled_text, end=end)
+
 class Server:
 
     prop_list = ["name", "command","unmount_command","mounted_time","mount_path","append_mount_path","host","key_path","remote_dir","pre_command","shell","port"]
 
-    def __init__(self, name, parent_name, command, unmount_command, append_mount_path, mounted_time, mount_path, is_alias = False, aliased_properties = [], host=None, key_path=None, remote_dir=None, pre_command=None, shell=None, port=22):
+    def __init__(self, name, parent_name, command, unmount_command, append_mount_path, mounted_time, mount_path, is_alias = False, aliased_properties = [], host=None, key_path=None, remote_dir=None, pre_command=None, shell=None, port="22"):
         self.is_alias = is_alias
         self.name = name
         self.parent_name = parent_name 
@@ -119,41 +199,18 @@ class Server:
             command = command + f" {self.get('mount_path')}"
         return command
 
-    def mount(self):
+    def mount(self, exit = True, indent = False):
         self.set("mounted_time", int(time.time()))
         cmd = self.assemble_mount_command()
-        print(cmd)
-        os.system(cmd)
-        sys.exit(0)
+        print_styled(cmd, "italic")
+        run_command(cmd, indent)
+        if exit:
+            sys.exit(0)
 
     def unmount(self, exit = True, indent = False):
         cmd = self.assemble_unmount_command()
-        if indent:
-            print(f"    {cmd}")
-        else:
-            print(cmd)
-        self.set("mounted_time", None)
-        result = subprocess.run(
-            cmd, 
-            shell=True, 
-            check=False,
-            capture_output=True, 
-            text=True
-        )
-
-        if result.stdout:
-            for line in result.stdout.splitlines():
-                if indent:
-                    print(f"    {line}")
-                else:
-                    print(line)
-
-        if result.stderr:
-            for line in result.stderr.splitlines():
-                if indent:
-                    print(f"    {line}")
-                else:
-                    print(line)
+        print_styled(cmd, "italic")
+        run_command(cmd, indent)
         if exit:
             sys.exit(0)
 
@@ -165,7 +222,7 @@ class Server:
 
     def list(self):
         if not self.is_alias:
-            print(f"--- {self.name} {'(latest)' if self.is_latest() else ''}  ---")
+            print_styled(f"--- {self.name} {'(latest)' if self.is_latest() else ''}  ---", "bold")
             print(f"Mount command: \"{self.get('command')}\"")
             print(f"Host: \"{self.get('host')}\"")
             print(f"Unmount command: \"{self.get('unmount_command')}\"")
@@ -218,11 +275,11 @@ def get_server(index = 2, server_name = None):
         try:
             server_name = sys.argv[index]
         except IndexError:
-            print("No server given.")
+            print_styled("No server given.", "red")
             sys.exit(0)
 
     if server_name not in config['servers'] and server_name not in config['aliases']:
-        print( f"Server \"{server_name}\" does not exist.")
+        print_styled( f"Server \"{server_name}\" does not exist.", "red")
         sys.exit(0)
 
     alias = None
@@ -281,14 +338,14 @@ def save_config():
 
 def add_server():
 
-    print('Adding new server. You will be guided through it.')
+    print_styled('Adding new server. You will be guided through it.', "bold")
 
     server_name = "" 
     while server_name in config['servers'] or server_name in config['aliases'] or server_name == "":
         server_name = input("Enter server name: ")
 
         if server_name in config['servers'] or server_name in config['aliases']:
-            print(f"Server \"{server_name}\" already exists. Try another.")
+            print_styled(f"Server \"{server_name}\" already exists. Try another.", "red")
 
 
     command = ""
@@ -380,12 +437,12 @@ def add_server():
 
     server.save_server()
 
-    print(f"Added server \"{server_name}\"")
+    print_styled(f"Added server \"{server_name}\"", "green")
 
     sys.exit(0)
 
 def add_alias():
-    print('Servers: ')
+    print_styled('Servers: ', "bold")
     try:
         servers = []
         for i, server_name in enumerate(config['servers']):
@@ -394,7 +451,7 @@ def add_alias():
         server_name = input("Choose which server you want to create alias for: ")
         server_name = servers[int(server_name) - 1]
     except IndexError:
-        print('Index does not exist.')
+        print_styled('Index does not exist.', "red")
         sys.exit(0)
     server = get_server(None, server_name)
     
@@ -403,7 +460,7 @@ def add_alias():
         alias = input("Enter alias name: ")
 
         if alias in config['aliases']:
-            print(f"Alias \"{alias}\" already exists. Try another.")
+            print_styled(f"Alias \"{alias}\" already exists. Try another.", "red")
             alias = ""
 
 
@@ -427,15 +484,15 @@ def add_alias():
 
 
 
-    print(f"Added alias \"{alias}\" for server \"{server_name}\"")
+    print_styled(f"Added alias \"{alias}\" for server \"{server_name}\"", "green")
     save_config()
     sys.exit(0)
 
 def unmount_server():
     if sys.argv[2] == "all":
-        print('Unmounting all servers')
+        print_styled('Unmounting all servers', 'bold')
         for server_name in config['servers']:
-            print(f"Unmounting server \"{server_name}\"")
+            print_styled(f"Unmounting server \"{server_name}\"", "cyan")
             server = get_server(None, server_name)
             try:
                 server.unmount(False, True)
@@ -443,7 +500,7 @@ def unmount_server():
                 continue
         for alias in config['aliases']:
             server = get_server(None, alias)
-            print(f"Unmounting server \"{server.name}\"")
+            print_styled(f"Unmounting server \"{server_name}\"", "cyan")
             try:
                 server.unmount(False, True)
             except Exception:
@@ -458,15 +515,15 @@ def update_server():
         server = sys.argv[2]
         prop = sys.argv[3]
         if prop not in prop_list:
-            print(f"Invalid property. Must be one of: {', '.join(prop_list)}")
+            print_styled(f"Invalid property. Must be one of: {', '.join(prop_list)}", "red")
             sys.exit(0)
         server_command = " ".join(sys.argv[4:])  # Joins with spaces, no extra quotes
     except IndexError:
-        print('No server given. Usage: mnt update <server_name> <mount|unmount> <command>. E.g. \"mnt update sshfs user@example.com:/remote/path /local/mount\"')
+        print_styled('No server given. Usage: mnt update <server_name> <mount|unmount> <command>.', "red")
         sys.exit(0)
 
     if server not in config['servers']:
-        print(f"Server \"{server}\" does not exist. Use command \"mnt add <server_name> <command>\" to add it.")
+        print_styled(f"Server \"{server}\" does not exist. Use command \"mnt add <server_name> <command>\" to add it.", "red")
         sys.exit(0)
 
     if prop == 'mount':
@@ -491,7 +548,7 @@ def update_server():
     elif prop == "shell":
         config['servers'][server]['shell'] = server_command
 
-    print(f"Updated server \"{server}\" prop \"{prop}\" to \"{server_command}\"")
+    print_styled(f"Updated server \"{server}\" prop \"{prop}\" to \"{server_command}\"", "green")
 
     save_config()
     sys.exit(0)
@@ -500,11 +557,11 @@ def delete_server():
     try:
         server = sys.argv[2]
     except IndexError:
-        print('No server given. Usage: mnt delete <server_name>. E.g. \"mnt delete sshfs\"')
+        print_styled('No server given. Usage: mnt delete <server_name>. E.g. \"mnt delete sshfs\"', "red")
         sys.exit(0)
 
     if server not in config['servers'] and server not in config['aliases']:
-        print(f"Server \"{server}\" does not exist. Use command \"mnt add <server_name> <command>\" to add it.")
+        print_styled(f"Server \"{server}\" does not exist. Use command \"mnt add <server_name> <command>\" to add it.", "red")
         sys.exit(0)
 
     sure = ""
@@ -520,12 +577,12 @@ def delete_server():
 
     save_config()
 
-    print(f"Deleted server \"{server}\"")
+    print_styled(f"Deleted server \"{server}\"", "green")
 
     sys.exit(0)
 
 def list_servers():
-    print('\nmnt servers:\n')
+    print_styled('\nmnt servers:\n', "bold")
     for server in config['servers']:
         server = get_server(None, server)
         server.list()
@@ -624,6 +681,10 @@ def get_server_from_mount_path(cwd):
 def ssh_shell():
     server = get_server(2)
 
+    if server.get('shell') is None:
+        print_styled('Error: No shell specified for server', "red")
+        sys.exit(1)
+
     if server.get('port') is not None:
         cmd = f"ssh -p {server.get('port')} -t {server.get('host')}"
     else:
@@ -635,7 +696,7 @@ def ssh_shell():
     remote_cmd = f"'cd {server.get('remote_dir')} && {server.get('shell')} --login'"
     cmd += f" {remote_cmd}"
 
-    print(cmd)
+    print_styled(cmd, "italic")
     os.system(cmd)
     sys.exit(0)
 
@@ -659,8 +720,8 @@ def ssh_exec():
             command = " ".join(sys.argv[3:])
 
         if server_name is None:
-            print('Error: No server specified, no mount path at provided cwd, and no last-mounted server available')
-            print('Usage: mnt ssh-exec [<server_name>] [<mount_path>] <command>')
+            print_styled('Error: No server specified, no mount path at provided cwd, and no last-mounted server available', "red")
+            print_styled('Usage: mnt ssh-exec [<server_name>] [<mount_path>] <command>')
             sys.exit(1)
 
         server = get_server(None, server_name)
@@ -676,7 +737,7 @@ def ssh_exec():
 
     # Check for required host
     if server.get('host') is None:
-        print(f'Error: Server "{server_name}" missing host configuration')
+        print_styled(f'Error: Server "{server_name}" missing host configuration', "red")
         print('Run: mnt enable-ssh-exec to configure')
         sys.exit(1)
 
@@ -703,9 +764,9 @@ def ssh_exec():
     full_cmd = ssh_parts + [remote_cmd]
     
     if server.get('pre_command') is not None:
-        print(f"[{server_name}:{server.get('remote_dir')}] {server.get('pre_command')} && {command}")
+        print_styled(f"[{server_name}:{server.get('remote_dir')}] {server.get('pre_command')} && {command}", "italic")
     else:
-        print(f"[{server_name}:{server.get('remote_dir')}] {command}")
+        print_styled(f"[{server_name}:{server.get('remote_dir')}] {command}", "italic")
     p = subprocess.Popen(full_cmd, stderr=subprocess.PIPE)
     _, stderr = p.communicate()
 
@@ -731,23 +792,23 @@ def cd_mount_path():
         # No server specified - use last mounted
         server_name = last_mounted_server()
         if server_name is None:
-            print('Error: No server specified and no last-mounted server available')
+            print_styled('Error: No server specified and no last-mounted server available', "red")
             print('Usage: mnt cd [<server_name>]')
             sys.exit(1)
 
     server = get_server(None, server_name)
 
     if server.get('mount_path') is None:
-        print(f"Server \"{server_name}\" does not have a mount path.")
+        print_styled(f"Server \"{server_name}\" does not have a mount path.", "red")
         sys.exit(1)
 
-    print(server.get('mount_path'))
+    print_styled(server.get('mount_path'), "italic")
     sys.exit(0)
 
 def refresh_server():
     server = get_server(2)
     server.set("mounted_time", int(time.time()))
-    print(f"Refreshed mount time of \"{server_name}\".")
+    print_styled(f"Refreshed mount time of \"{server_name}\".", "green")
 
     sys.exit(0)
 
@@ -768,21 +829,21 @@ if __name__ == '__main__':
     try:
         command = sys.argv[1]
     except IndexError:
-        print('No command given.')
+        print_styled('No command given.', "red")
         sys.exit(0)
 
     if command == 'mount':
         try:
             server = sys.argv[2]
         except IndexError:
-            print('No server given. Usage: mnt mount <server_name>. E.g. \"mnt mount sshfs\"')
+            print_styled('No server given. Usage: mnt mount <server_name>. E.g. \"mnt mount sshfs\"', "red")
             sys.exit(0)
         if server in config['servers']:
             mount(config['servers'][sys.argv[2]])
         elif server in config['aliases']:
             mount(config['aliases'][sys.argv[2]])
         else:
-            print(f"Server \"{server}\" does not exist. Use command \"mnt add <server_name> <command>\" to add it.")
+            print_styled(f"Server \"{server}\" does not exist. Use command \"mnt add <server_name> <command>\" to add it.", "red")
             sys.exit(0)
     elif command == 'add':
         add_server()
@@ -815,6 +876,6 @@ if __name__ == '__main__':
         elif command in config['aliases']:
             mount(config['aliases'][command])
             sys.exit(0)
-        print('Unknown command: ' + command)
+        print_styled('Unknown command: ' + command, "red")
         sys.exit(0)
 
