@@ -526,7 +526,7 @@ def add_tunnel():
         for i, server_name in enumerate(config['servers']):
             servers.append(server_name)
             print(f"{i+1}) {server_name}")
-        server_name = input("Choose which server you want to add tunnel o: ")
+        server_name = input("Choose which server you want to add tunnel to: ")
         server_name = servers[int(server_name) - 1]
     except IndexError:
         print_styled('Index does not exist.', "red")
@@ -543,7 +543,7 @@ def add_tunnel():
     while tunnel_host == "":
         tunnel_host = input("Enter tunnel host (without username, e.g. example.com): ")
     while tunnel_forwarded_host == "":
-        tunnel_forwarded_host = input("Enter tunnel forwarded host (e.g. 127.0.0.1): ")
+        tunnel_forwarded_host = input("Enter tunnel forwarded host (the end server you want to log in to through the tunnel) (e.g. 127.0.0.1): ")
     remote_tunnel_port = ""
     while remote_tunnel_port == "":
         remote_tunnel_port = input("Enter remote tunnel port (the port you use to log in to the server with): ")
@@ -557,6 +557,7 @@ def add_tunnel():
     server.set('tunnel_key_path', tunnel_key_path)
     server.set('remote_tunnel_port', remote_tunnel_port)
     server.set('tunnel_username', tunnel_username)
+    server.set('tunnel_forwarded_host', tunnel_forwarded_host)
 
     print_styled(f"Added tunnel for server \"{server.name}\"", "green")
 
