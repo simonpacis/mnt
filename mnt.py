@@ -483,7 +483,7 @@ def add_server():
     server.save_server()
 
     do_tunnel = ""
-    while tunnel == "":
+    while do_tunnel == "":
         do_tunnel = input("Does this server require an SSH tunnel to be opened before mounting? (y/n) ")
         if do_tunnel == "y" or do_tunnel == "Y":
             add_tunnel(server_name, False)
