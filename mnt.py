@@ -142,6 +142,13 @@ class Server:
     def get(self, prop):
         return getattr(self, prop, None)
 
+    def get_host(self):
+        if self.get("tunnel_port") is not None:
+            return f"{self.get('host').rsplit('@', 1)[0]}@localhost"
+        else:
+            return self.get("host")
+
+
     def set(self, prop, value, save = True):
         setattr(self, prop, value)
         if save:
@@ -177,9 +184,9 @@ class Server:
     def assemble_mount_command(self):
         if self.get('command') == "sshfs":
             if self.get('port') is not None:
-                command = f"{self.get('command')} -p {self.get('port')} {self.get('host')}"
+                command = f"{self.get('command')} -p {self.get('port')} {self.get_host()}"
             else:
-                command = f"{self.get('command')} {self.get('host')}"
+                command = f"{self.get('command')} {self.get_host()}"
             if self.remote_dir:
                 command = command + f":{self.get('remote_dir')}"
             if self.key_path:
@@ -217,7 +224,7 @@ class Server:
         run_command(cmd, indent = False)
 
     def destroy_tunnel(self):
-        cmd = f"kill $(lsof -ti :{self.tunnel_port})"
+        cmd = f"kill $(lsof -ti :{self.port})"
         print_styled(cmd, "italic")
         run_command(cmd, indent = False)
 
@@ -225,7 +232,6 @@ class Server:
         self.set("mounted_time", int(time.time()))
         if self.get("tunnel_port") is not None:
             self.setup_tunnel()
-            self.host = f"{self.get('host').rsplit('@', 1)[0]}@localhost"
         print_styled("Mounting...", "blue")
         cmd = self.assemble_mount_command()
         print_styled(cmd, "italic")
@@ -793,9 +799,9 @@ def ssh_shell():
         sys.exit(1)
 
     if server.get('port') is not None:
-        cmd = f"ssh -p {server.get('port')} -t {server.get('host')}"
+        cmd = f"ssh -p {server.get('port')} -t {server.get_host()}"
     else:
-        cmd = f"ssh -t {server.get('host')}"
+        cmd = f"ssh -t {server.get_host()}"
     if server.get('key_path') is not None:
         cmd += f" -i {os.path.expanduser(server.get('key_path'))}"
 
@@ -849,7 +855,7 @@ def ssh_exec():
         sys.exit(1)
 
     # Add host
-    ssh_parts.append(server.get('host'))
+    ssh_parts.append(server.get_host())
 
     # Handle remote command construction
     remote_cmd = ""
