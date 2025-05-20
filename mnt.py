@@ -934,7 +934,19 @@ mnt() {
   else
     command mnt "$@"
   fi
-}""")
+}
+
+Or this to your config.fish
+function mnt
+    if test "$argv[1]" = "cd"
+        cd (command mnt $argv)
+    else
+        command mnt $argv
+    end
+end
+
+
+""")
 
 if __name__ == '__main__':
     config = setup_config()
